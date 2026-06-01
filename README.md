@@ -245,6 +245,37 @@ uv run python model_test.py
 
 ---
 
+## 🔮 Mejoras Futuras
+
+### Isolation Forest — Detección de Zero-Days
+El modelo actual (XGBoost supervisado) detecta fraude basándose en patrones conocidos del dataset de entrenamiento. Su punto débil son los **zero-days** — fraudes completamente nuevos que Ciber diseñe sin ningún patrón previo.
+
+**Solución propuesta:** capa de detección no supervisada con Isolation Forest:
+
+```python
+from sklearn.ensemble import IsolationForest
+
+# Entrenado solo con transacciones legítimas
+iso = IsolationForest(contamination=0.05, random_state=42)
+iso.fit(X_legitimas)
+
+# En producción: doble capa
+score_xgb = pipeline.predict_proba(tx)[:, 1][0]      # fraude conocido
+score_iso  = iso.decision_function(tx)                # anomalía desconocida
+
+# Alerta si cualquiera de los dos detecta riesgo
+es_sospechosa = score_xgb >= 0.60 or score_iso < umbral_iso
+```
+
+**¿Por qué complementa a XGBoost?**
+- XGBoost → detecta fraude con patrones conocidos (supervisado)
+- Isolation Forest → detecta anomalías nunca vistas (no supervisado)
+- Juntos cubren fraude conocido + zero-days
+
+Esta arquitectura de doble capa es el estándar en sistemas de fraude bancario de producción real.
+
+---
+
 ## 👤 Autor
 
 **Manuel Correa** — Data Science / AI Engineering  
